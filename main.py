@@ -1,9 +1,19 @@
 from fastapi import FastAPI
-from sqlmodel import SQLModel, Field, create_engine, Session
+from contextlib import asynccontextmanager
+from database import create_db_and_tables
+from rotas import home, usuarios, refeicoes, alimentos
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    create_db_and_tables()
+    yield
 
-# home page
-@app.get("/")
-async def home():
-    return {"message" : "API do sistema de Informação nutricional"}
+app = FastAPI(lifespan=lifespan)
+
+# Rotas para Endpoints
+app.include_router(home.router)
+app.include_router(usuarios.router)
+app.include_router(refeicoes.router)
+app.include_router(alimentos.router)
+
+
