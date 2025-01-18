@@ -10,8 +10,9 @@ load_dotenv()
 logging.basicConfig()
 logging.getLogger("sqlalchemy.engine").setLevel(logging.INFO)
 
-DATABASE_URL = "sqlite:///./database.db"
-engine = create_engine(DATABASE_URL, echo=True)
+
+engine = create_engine(os.getenv("DATABASE_URL"))
+
 
 def create_db_and_tables() -> None:
     SQLModel.metadata.create_all(engine)
