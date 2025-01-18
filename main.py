@@ -2,13 +2,11 @@ from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from database import create_db_and_tables
 from rotas import home, usuarios, refeicoes, alimentos
-from populate import populate_data
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     create_db_and_tables()
-
-    populate_data()
 
     yield
 
