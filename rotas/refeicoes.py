@@ -5,7 +5,7 @@ from database import get_session
 from datetime import date
 from models.alimento import Alimento
 from models.usuario import Usuario
-from typing import List
+from sqlalchemy.orm import joinedload
 
 router = APIRouter(
     prefix="/refeicoes",
@@ -205,18 +205,20 @@ def read_alimentos_por_refeicao(refeicao_id: int, session: Session = Depends(get
     Raises:
         HTTPException: Caso a refeicao nao seja encontrada
     """ 
-    statement = select(Refeicao).where(Refeicao.id == refeicao_id)
-    refeicao = session.exec(statement).one_or_none()
+    refeicao = session.exec(
+        select(Refeicao).options(joinedload(Refeicao.alimentos)).where(Refeicao.id == refeicao_id)
+    ).unique().one_or_none()  # Use unique() e one_or_none()
+    
     if not refeicao:
         raise HTTPException(status_code=404, detail="Refeição não encontrada")
-    
-    alimentos = session.exec(select(Alimento).join(RefeicaoAlimento).where(RefeicaoAlimento.refeicao_id == refeicao_id)).all()
-    return alimentos
+
+    return refeicao.alimentos
+
 
 @router.get("/refeicoes/{refeicao_id}/usuario", response_model=Usuario)
 def read_usuario_por_refeicao(refeicao_id: int, session: Session = Depends(get_session)):
     """
-    Retornar o usuarios associado a uma refeicao
+    Retornar o usuario associado a uma refeicao
     Args:
         refeicao_id (int): Id da refeicao
         session (Session): A sessao do banco de dados
@@ -227,7 +229,10 @@ def read_usuario_por_refeicao(refeicao_id: int, session: Session = Depends(get_s
     Raises:
         HTTPException: Caso a refeicao nao seja encontrada
     """ 
-    refeicao = session.get(Refeicao, refeicao_id)
+    refeicao = session.exec(
+        select(Refeicao).options(joinedload(Refeicao.usuario)).where(Refeicao.id == refeicao_id)
+    ).unique().one_or_none()  # Use unique() e one_or_none()
+
     if not refeicao:
         raise HTTPException(status_code=404, detail="Refeição não encontrada")
 

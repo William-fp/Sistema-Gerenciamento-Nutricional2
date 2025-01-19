@@ -6,6 +6,7 @@ from models.refeicao import Refeicao
 from models.alimento import Alimento
 from models.refeicao import RefeicaoAlimento
 
+
 router = APIRouter(
     prefix="/usuarios",
     tags=["Usuarios"],
@@ -35,21 +36,10 @@ def read_usuarios(
     sort_by: str = Query(default="name"),  
     session: Session = Depends(get_session)
 ):
-    """
-    Lista todas os usuarios
-    Args:
-        offset (int): Deslocamento da query
-        limit (int): Limite da query
-        sort_by (str): Tipo de ordenamento
-        session (Session): Sessao do banco de dados
-
-    Returns:
-        list[Usuario]: Retorna todas os usuarios
-    """ 
     statement = select(Usuario).offset(offset).limit(limit)
     if sort_by:
         statement = statement.order_by(getattr(Usuario, sort_by))
-    return session.exec(statement).all()
+    return session.exec(statement).options(joinedload(Usuario.refeicoes)).all()
 
 
 @router.get("/{usuario_id}", response_model=Usuario)
@@ -174,22 +164,18 @@ def read_refeicoes_com_alimentos(usuario_id: int, session: Session = Depends(get
     Returns:
         resultado: objeto contendo os refeicoes e alimentos
     """ 
-    usuario = session.get(Usuario, usuario_id)
+    usuario = session.exec(
+        select(Usuario).options(joinedload(Usuario.refeicoes).joinedload(Refeicao.alimentos)).where(Usuario.id == usuario_id)
+    ).unique().one_or_none()  # Use unique() e one_or_none()
+    
     if not usuario:
         raise HTTPException(status_code=404, detail="Usuário não encontrado")
 
-    refeicoes = session.exec(select(Refeicao).where(Refeicao.usuario_id == usuario_id)).all()
-    if not refeicoes:
-        raise HTTPException(status_code=404, detail="Nenhuma refeição encontrada para este usuário")
-
     resultado = []
-    for refeicao in refeicoes:
-        alimentos = session.exec(
-            select(Alimento).join(RefeicaoAlimento).where(RefeicaoAlimento.refeicao_id == refeicao.id)
-        ).all()
+    for refeicao in usuario.refeicoes:
         resultado.append({
             "refeicao": refeicao,
-            "alimentos": alimentos
+            "alimentos": refeicao.alimentos
         })
 
     return resultado
