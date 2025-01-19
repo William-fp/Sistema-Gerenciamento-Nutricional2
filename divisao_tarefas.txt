@@ -1,2 +1,4 @@
 William: Models, Database, Rotas
 Levi: Models, Main, Rotas
+
+OBS: Ficou dividido metade pra cada em todas as partes basicamente

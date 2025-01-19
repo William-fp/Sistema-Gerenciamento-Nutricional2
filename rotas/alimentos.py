@@ -8,7 +8,7 @@ router = APIRouter(
     tags=["Alimentos"],
 )
 
-# Alimentos
+
 @router.post("/", response_model=Alimento)
 def create_alimento(alimento: Alimento, session: Session = Depends(get_session)):
     session.add(alimento)
@@ -17,9 +17,16 @@ def create_alimento(alimento: Alimento, session: Session = Depends(get_session))
     return alimento
 
 @router.get("/", response_model=list[Alimento])
-def read_alimentos(offset: int = 0, limit: int = Query(default=10, le=100), 
-               session: Session = Depends(get_session)):
-    return session.exec(select(Alimento).offset(offset).limit(limit)).all()
+def read_alimentos(
+    offset: int = 0,
+    limit: int = Query(default=10, le=100),
+    sort_by: str = Query(default="nome"),  
+    session: Session = Depends(get_session)
+):
+    statement = select(Alimento).offset(offset).limit(limit)
+    if sort_by:
+        statement = statement.order_by(getattr(Alimento, sort_by))
+    return session.exec(statement).all()
 
 @router.get("/{alimento_id}", response_model=Alimento)
 def read_alimento(alimento_id: int, session: Session = Depends(get_session)):
@@ -27,6 +34,7 @@ def read_alimento(alimento_id: int, session: Session = Depends(get_session)):
     if not alimento:
         raise HTTPException(status_code=404, detail="Alimento não encontrado")
     return alimento
+
 
 @router.put("/{alimento_id}", response_model=Alimento)
 def update_alimento(alimento_id: int, alimento: Alimento, session: Session = Depends(get_session)):
@@ -48,3 +56,9 @@ def delete_alimento(alimento_id: int, session: Session = Depends(get_session)):
     session.delete(alimento)
     session.commit()
     return {"ok": True}
+
+
+@router.get("/search/", response_model=list[Alimento])
+def search_alimentos(query: str, session: Session = Depends(get_session)):
+    statement = select(Alimento).where(Alimento.nome.ilike(f"%{query}%"))
+    return session.exec(statement).all()

@@ -1,5 +1,6 @@
 from sqlmodel import SQLModel, Field, Relationship
 from typing import List, TYPE_CHECKING
+from datetime import date
 
 
 if TYPE_CHECKING:
@@ -13,6 +14,7 @@ class RefeicaoAlimento(SQLModel, table=True):
 class RefeicaoBase(SQLModel):
     id: int | None = Field(default=None, primary_key=True)
     tipo: str  # Exemplo: café da manhã, almoço, etc.
+    data: date
 
 
 class Refeicao(RefeicaoBase, table=True):
