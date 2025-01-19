@@ -13,7 +13,7 @@ class RefeicaoAlimento(SQLModel, table=True):
 
 class RefeicaoBase(SQLModel):
     id: int | None = Field(default=None, primary_key=True)
-    tipo: str  # Exemplo: café da manhã, almoço, etc.
+    tipo: str  # Exemplo: cafe da manha, almoço, etc
     data: date
 
 
@@ -21,3 +21,12 @@ class Refeicao(RefeicaoBase, table=True):
     usuario_id: int = Field(foreign_key="usuario.id")
     usuario: "Usuario" = Relationship(back_populates="refeicoes")
     alimentos: List["Alimento"] = Relationship(link_model=RefeicaoAlimento)
+
+
+class RefeicaoCreate(RefeicaoBase):
+    usuario_id: int
+    alimentos_ids: List[int]
+
+
+class RefeicaoUpdate(RefeicaoBase):
+    alimentos_ids: List[int]

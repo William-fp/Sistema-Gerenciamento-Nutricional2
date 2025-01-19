@@ -3,30 +3,13 @@ from sqlmodel import Session, select, func
 from database import get_session
 from models.usuario import Usuario
 from models.refeicao import Refeicao
-
+from models.alimento import Alimento
+from models.refeicao import RefeicaoAlimento
 
 router = APIRouter(
     prefix="/usuarios",
     tags=["Usuarios"],
 )
-
-
-
-
-@router.get("/usuarios/count")
-def count_usuarios(session: Session = Depends(get_session)):
-    count = session.exec(select(func.count(Usuario.id))).one()
-    return {"total_usuarios": count}
-
-
-
-@router.get("/usuarios/{usuario_id}/refeicoes/count")
-def count_refeicoes_por_usuario(usuario_id: int, session: Session = Depends(get_session)):
-    count = session.exec(select(func.count(Refeicao.id)).where(Refeicao.usuario_id == usuario_id)).one()
-    return {"total_refeicoes": count}
-
-
-
 
 @router.post("/", response_model=Usuario)
 def create_usuario(usuario: Usuario, session: Session = Depends(get_session)):
@@ -34,6 +17,7 @@ def create_usuario(usuario: Usuario, session: Session = Depends(get_session)):
     session.commit()
     session.refresh(usuario)
     return usuario
+
 
 @router.get("/", response_model=list[Usuario])
 def read_usuarios(
@@ -47,12 +31,31 @@ def read_usuarios(
         statement = statement.order_by(getattr(Usuario, sort_by))
     return session.exec(statement).all()
 
+
 @router.get("/{usuario_id}", response_model=Usuario)
 def read_usuario(usuario_id: int, session: Session = Depends(get_session)):
     usuario = session.get(Usuario, usuario_id)
     if not usuario:
         raise HTTPException(status_code=404, detail="Usuario não encontrado")
     return usuario
+
+
+@router.get("/search/", response_model=list[Usuario])
+def search_usuarios(query: str, session: Session = Depends(get_session)):
+    statement = select(Usuario).where(Usuario.name.ilike(f"%{query}%"))
+    return session.exec(statement).all()
+
+
+@router.get("/{usuario_id}/refeicoes/count")
+def count_refeicoes_por_usuario(usuario_id: int, session: Session = Depends(get_session)):
+    count = session.exec(select(func.count(Refeicao.id)).where(Refeicao.usuario_id == usuario_id)).one()
+    return {"total_refeicoes": count}
+
+
+@router.get("/stats/count")
+def count_usuarios(session: Session = Depends(get_session)):
+    count = session.exec(select(func.count(Usuario.id))).one()
+    return {"total_usuarios": count}
 
 
 @router.put("/{usuario_id}", response_model=Usuario)
@@ -67,6 +70,7 @@ def update_usuario(usuario_id: int, usuario: Usuario, session: Session = Depends
     session.refresh(db_usuario)
     return db_usuario
 
+
 @router.delete("/{usuario_id}")
 def delete_user(usuario_id: int, session: Session = Depends(get_session)):
     usuario = session.get(Usuario, usuario_id)
@@ -76,18 +80,24 @@ def delete_user(usuario_id: int, session: Session = Depends(get_session)):
     session.commit()
     return {"ok": True}
 
+@router.get("/{usuario_id}/refeicoes_com_alimentos")
+def read_refeicoes_com_alimentos(usuario_id: int, session: Session = Depends(get_session)):
+    usuario = session.get(Usuario, usuario_id)
+    if not usuario:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
 
-@router.get("/{usuario_id}/refeicoes", response_model=list[Refeicao])
-def read_refeicoes_por_usuario(usuario_id: int, session: Session = Depends(get_session)):
-    statement = select(Refeicao).where(Refeicao.usuario_id == usuario_id)
-    refeicoes = session.exec(statement).all()
+    refeicoes = session.exec(select(Refeicao).where(Refeicao.usuario_id == usuario_id)).all()
     if not refeicoes:
         raise HTTPException(status_code=404, detail="Nenhuma refeição encontrada para este usuário")
-    return refeicoes
 
-@router.get("/search/", response_model=list[Usuario])
-def search_usuarios(query: str, session: Session = Depends(get_session)):
-    statement = select(Usuario).where(Usuario.name.ilike(f"%{query}%"))
-    return session.exec(statement).all()
+    resultado = []
+    for refeicao in refeicoes:
+        alimentos = session.exec(
+            select(Alimento).join(RefeicaoAlimento).where(RefeicaoAlimento.refeicao_id == refeicao.id)
+        ).all()
+        resultado.append({
+            "refeicao": refeicao,
+            "alimentos": alimentos
+        })
 
-
+    return resultado
