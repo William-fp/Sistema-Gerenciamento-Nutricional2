@@ -7,3 +7,4 @@ git clone https://github.com/LeviLeal/informacao_nutricional_etapa_2.git
 cd informacao_nutricional_etapa_2
 uv run fastapi dev
 ```
+Trabalho feito em conjunto LeviLeal
